@@ -74,7 +74,8 @@ void print_encoding(const GameEncoding *g) {
 
 typedef enum {
   HEX = 0,
-  CSTR
+  CSTR,
+  PGN
 } StrFormat;
 
 char *to_square_str(const SquareEncoding s) {
@@ -91,6 +92,8 @@ char *to_square_str(const SquareEncoding s) {
   return sq_str;
 }
 
+// Perhaps I should define set of format specifiers and pass them
+// as opposed to using this string formatting type.
 char *to_str(const GameEncoding *g, StrFormat f) {
   char *str = malloc((sizeof(g->ms[0].piece)
 		      + sizeof(g->ms[0].square)) * g->turn);
@@ -100,8 +103,20 @@ char *to_str(const GameEncoding *g, StrFormat f) {
   }
   for (size_t i = 0; i < g->turn; i++) {
     MoveEncoding m = g->ms[i];
-    if (f == HEX) sprintf(str, "0x%02x0x%02x", m.piece, m.square);
-    else sprintf(str, "%c%s", m.piece, to_square_str(m.square));
+    switch(f) {
+    case HEX:
+      sprintf(str, "0x%02x0x%02x", m.piece, m.square);
+      break;
+    case CSTR:
+      sprintf(str, "%c%s", m.piece, to_square_str(m.square));
+      break;
+    case PGN:
+      assert(0 && "implement me!");
+      break;
+    default:
+      fprintf(stderr, "Should not get here in to_str switch");
+      exit(EXIT_FAILURE);
+    }
   }
   return str;
 }
