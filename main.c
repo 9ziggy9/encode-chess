@@ -121,13 +121,20 @@ char *to_ascii_str(const GameEncoding *g) {
   return str;
 }
 
-char *to_str(GameEncoding *g, StrFormat f) {
-  return (char *) NULL;
+char *to_str(GameEncoding *g, StrFormat fmt) {
+  switch(fmt) {
+  case HEX: return to_hex_str(g);
+  case ASCII: return to_ascii_str(g);
+  default:
+    fprintf(stderr, "to_str: This should be unreachable.\n");
+    exit(EXIT_FAILURE);
+  }
 }
 
 // SINGLE SOURCE OF TRUTH FOR DEALLOCATING STRING MEMORY!
 // BEWARE OF DOUBLE FREEING PLZ
-void write_to_file(char *str) {
+void write_to_file(GameEncoding *g, StrFormat fmt) {
+  char *str = to_str(g, fmt);
   FILE *f;
   f = fopen("out.txt", "w");
   if (f == NULL) {
@@ -140,17 +147,6 @@ void write_to_file(char *str) {
   str = NULL;
 }
 
-int main(void) {
-  GameEncoding game = new_game();
-  append_move(&game, (MoveEncoding) {WHITE_PAWN, E4});
-  append_move(&game, (MoveEncoding) {BLACK_PAWN, E5});
-  print_encoding(&game);
-  char *test = to_ascii_str(&game);
-  printf("TEST ENCODING: %s\n", test);
-  write_to_file(test);
-  return 0;
-}
-
 void fgets_exit_gracefully() {
   // if fgets encounters EOF or error, it return null we use
   // feof and ferror respectively to test these conditions
@@ -161,6 +157,15 @@ void fgets_exit_gracefully() {
     fprintf(stderr, "Error: fgets reading NULL");
     exit(EXIT_FAILURE);
   }
+}
+
+int main(void) {
+  GameEncoding game = new_game();
+  append_move(&game, (MoveEncoding) {WHITE_PAWN, E4});
+  append_move(&game, (MoveEncoding) {BLACK_PAWN, E5});
+  print_encoding(&game);
+  write_to_file(&game, ASCII);
+  return 0;
 }
 
 #define MAX_INPUT_LENGTH 5
