@@ -16,7 +16,7 @@ typedef enum {
 } PieceEncoding;
 
 typedef enum {
-  // 0x88 encoding scheme
+  // 0x88 encoding scheme: https://en.wikipedia.org/wiki/0x88
   A1 = 0x00, B1, C1, D1, E1, F1, G1, H1,
   A2 = 0x10, B2, C2, D2, E2, F2, G2, H2,
   A3 = 0x20, B3, C3, D3, E3, F3, G3, H3,
@@ -72,18 +72,38 @@ void print_encoding(const GameEncoding *g) {
   printf("\n");
 }
 
-char *to_c_str(const GameEncoding *g) {
-  char *c_str = malloc((sizeof(g->ms[0].piece)
+typedef enum {
+  HEX = 0,
+  CSTR
+} StrFormat;
+
+char *to_square_str(const SquareEncoding s) {
+  char *sq_str = malloc(3*sizeof(char));
+  if (sq_str == NULL) {
+    perror("Failed to allocate memory to c_str.\n");
+    exit(EXIT_FAILURE);
+  }
+  char rank = (((char) s) >> 4) + '1';
+  char file = (((char) s) & 7) + 'a';
+  sq_str[0] = file;
+  sq_str[1] = rank;
+  sq_str[3] = '\0';
+  return sq_str;
+}
+
+char *to_str(const GameEncoding *g, StrFormat f) {
+  char *str = malloc((sizeof(g->ms[0].piece)
 		      + sizeof(g->ms[0].square)) * g->turn);
-  if (c_str == NULL) {
+  if (str == NULL) {
     perror("Failed to allocate memory to c_str.\n");
     exit(EXIT_FAILURE);
   }
   for (size_t i = 0; i < g->turn; i++) {
     MoveEncoding m = g->ms[i];
-    sprintf(c_str, "%c%c", m.piece, m.square);
+    if (f == HEX) sprintf(str, "0x%02x0x%02x", m.piece, m.square);
+    else sprintf(str, "%c%s", m.piece, to_square_str(m.square));
   }
-  return c_str;
+  return str;
 }
 
 void fgets_exit_gracefully() {
@@ -116,6 +136,7 @@ int main(void) {
     printf("You entered: %s\n", input);
     append_move(&game, encode_move(input));
     print_encoding(&game);
+    printf("%s\n", to_str(&game, CSTR));
   }
   return 0;
 }
