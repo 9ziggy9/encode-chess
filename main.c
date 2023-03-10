@@ -59,26 +59,31 @@ size_t appendMove(GameEncoding *g, MoveEncoding m) {
   return ++g->turn;
 }
 
+void fgets_exit_gracefully() {
+  // if fgets encounters EOF or error, it return null we use
+  // feof and ferror respectively to test these conditions
+  if (feof(stdin)) {
+    fprintf(stdout, "End of file reached.\n");
+    exit(EXIT_SUCCESS);
+  } else if (ferror(stdin)) {
+    fprintf(stderr, "Error: fgets reading NULL");
+    exit(EXIT_FAILURE);
+  }
+}
+
 #define MAX_INPUT_LENGTH 5
 int main(void) {
   char input[MAX_INPUT_LENGTH];
   size_t read_length;
   while (1) {
     printf("Make move: ");
-    // if fgets encounters EOF or error, it return null we use
-    // feof and ferror respectively to test these conditions
     if (fgets(input, MAX_INPUT_LENGTH, stdin) == NULL) {
-      if (feof(stdin)) {
-	fprintf(stdout, "End of file reached.\n");
-	exit(EXIT_SUCCESS);
-      } else if (ferror(stdin)) {
-	fprintf(stderr, "Error: fgets reading NULL");
-	exit(EXIT_FAILURE);
-      }
+      fgets_exit_gracefully();
     }
     read_length = strlen(input);
     if (read_length > 0 && input[read_length - 1] == '\n') {
-      input[read_length - 1] = '\0'; // Remove \n and terminate the string
+      // Remove \n and terminate the string
+      input[read_length - 1] = '\0'; 
     }
     printf("You entered: %s\n", input);
   }
