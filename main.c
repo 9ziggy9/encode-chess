@@ -78,7 +78,7 @@ typedef enum {
   PGN
 } StrFormat;
 
-char *to_square_str(const SquareEncoding s) {
+static char *to_square_str(const SquareEncoding s) {
   char *sq_str = malloc(3*sizeof(char));
   if (sq_str == NULL) {
     perror("Failed to allocate memory to c_str.\n");
@@ -92,11 +92,61 @@ char *to_square_str(const SquareEncoding s) {
   return sq_str;
 }
 
+static void str_alloc_guard(char *p) {
+  if (p == NULL) {
+    perror("Failed to allocate memory to string.\n");
+    exit(EXIT_FAILURE);
+  }
+}
+
+char *to_hex_str(const GameEncoding *g) {
+  // "7034" -> 1. e4
+  // "70344E55" -> 1. e4 Nf3
+  // Allocate 2 bytes for each encoding, + 1 for null terminator
+  size_t num_bytes = 4 * (sizeof(char) * g->turn - 1) + 1;
+  char *str = malloc(num_bytes);
+  printf("String size: %zu\n", num_bytes);
+  str_alloc_guard(str);
+  for (size_t i = 0; i < g->turn - 1; i++) {
+    MoveEncoding m = g->ms[i+1];
+    sprintf(str + 4 * i, "%02x%02x", m.piece, m.square);
+  }
+  return str;
+}
+
+// SINGLE SOURCE OF TRUTH FOR DEALLOCATING STRING MEMORY!
+// BEWARE OF DOUBLE FREEING PLZ
+void write_to_file(char *str) {
+  FILE *f;
+  f = fopen("out.txt", "w");
+  if (f == NULL) {
+    fprintf(stderr, "Error opening file: out.txt.\n");
+    exit(EXIT_FAILURE);
+  }
+  fprintf(f, "%s", str);
+  fclose(f);
+  free(str);
+  str = NULL;
+}
+
+int main(void) {
+  GameEncoding game = new_game();
+  append_move(&game, (MoveEncoding) {WHITE_PAWN, E4});
+  append_move(&game, (MoveEncoding) {BLACK_KNIGHT, F6});
+  print_encoding(&game);
+  char *test = to_hex_str(&game);
+  printf("TEST ENCODING: %s\n", test);
+  write_to_file(test);
+  free(test);
+  return 0;
+}
+
 // Perhaps I should define set of format specifiers and pass them
 // as opposed to using this string formatting type.
 char *to_str(const GameEncoding *g, StrFormat f) {
   char *str = malloc((sizeof(g->ms[0].piece)
-		      + sizeof(g->ms[0].square)) * g->turn);
+		    + sizeof(g->ms[0].square)) * g->turn
+		    + 1);
   if (str == NULL) {
     perror("Failed to allocate memory to c_str.\n");
     exit(EXIT_FAILURE);
@@ -134,13 +184,15 @@ void fgets_exit_gracefully() {
 }
 
 #define MAX_INPUT_LENGTH 5
-int main(void) {
+int main2(void) {
   char input[MAX_INPUT_LENGTH];
   size_t read_length;
   GameEncoding game = new_game();
   while (1) {
     printf("Make move: ");
     if (fgets(input, MAX_INPUT_LENGTH, stdin) == NULL) {
+      printf("EXITING FOR STRING TEST\n");
+      printf("%s\n", to_str(&game, CSTR));
       fgets_exit_gracefully();
     }
     read_length = strlen(input);
@@ -151,7 +203,7 @@ int main(void) {
     printf("You entered: %s\n", input);
     append_move(&game, encode_move(input));
     print_encoding(&game);
-    printf("%s\n", to_str(&game, CSTR));
+    /* printf("%s\n", to_str(&game, CSTR)); */
   }
   return 0;
 }
