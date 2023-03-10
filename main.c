@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <assert.h>
 
 typedef enum {
   BLACK_RESIGN  = 0x45, WHITE_RESIGN  = 0x65,
@@ -29,7 +30,10 @@ typedef struct MoveEncoding {
   SquareEncoding square;
 } MoveEncoding;
 
-typedef MoveEncoding GameEncoding[255];
+typedef struct GameEncoding {
+  MoveEncoding ms[255];
+  size_t turn;
+} GameEncoding;
 
 SquareEncoding to0x88(const char rk, const char fl) {
   SquareEncoding rank = rk - 'a';
@@ -47,7 +51,11 @@ MoveEncoding encodeMove(const char *input) {
   return m;
 }
 
-void appendMove(GameEncoding *g, MoveEncoding m) {}
+size_t appendMove(GameEncoding *g, MoveEncoding m) {
+  assert(g->turn <= sizeof(g->ms) / sizeof(g->ms[0]) && "Too many moves");
+  g->ms[g->turn] = m;
+  return ++g->turn;
+}
 
 int main(void) {
   char input[3];
