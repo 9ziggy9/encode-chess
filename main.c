@@ -46,17 +46,28 @@ SquareEncoding to0x88(const char rk, const char fl) {
 PieceEncoding toPieceByte(const char piece) { return (PieceEncoding) piece; }
 
 MoveEncoding encodeMove(const char *input) {
-  MoveEncoding m = {
+  return (MoveEncoding) {
     .piece = toPieceByte(input[0]),
     .square = to0x88(input[1], input[2])
   };
-  return m;
 }
+
+GameEncoding newGame() { return (GameEncoding) {.turn = 1}; }
 
 size_t appendMove(GameEncoding *g, MoveEncoding m) {
   assert(g->turn <= sizeof(g->ms) / sizeof(g->ms[0]) && "Too many moves");
   g->ms[g->turn] = m;
   return ++g->turn;
+}
+
+void printEncoding(const GameEncoding *g) {
+  size_t turn = 1;
+  printf("\n");
+  while(turn < g->turn) {
+    printf("(0x%02x)(0x%02x)", g->ms[turn].piece, g->ms[turn].square);
+    turn++;
+  }
+  printf("\n");
 }
 
 void fgets_exit_gracefully() {
@@ -75,6 +86,7 @@ void fgets_exit_gracefully() {
 int main(void) {
   char input[MAX_INPUT_LENGTH];
   size_t read_length;
+  GameEncoding game = newGame();
   while (1) {
     printf("Make move: ");
     if (fgets(input, MAX_INPUT_LENGTH, stdin) == NULL) {
@@ -86,6 +98,8 @@ int main(void) {
       input[read_length - 1] = '\0'; 
     }
     printf("You entered: %s\n", input);
+    appendMove(&game, encodeMove(input));
+    printEncoding(&game);
   }
   return 0;
 }
