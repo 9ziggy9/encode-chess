@@ -74,23 +74,8 @@ void print_encoding(const GameEncoding *g) {
 
 typedef enum {
   HEX = 0,
-  CSTR,
-  PGN
+  ASCII,
 } StrFormat;
-
-static char *to_square_str(const SquareEncoding s) {
-  char *sq_str = malloc(3*sizeof(char));
-  if (sq_str == NULL) {
-    perror("Failed to allocate memory to c_str.\n");
-    exit(EXIT_FAILURE);
-  }
-  char rank = (((char) s) >> 4) + '1';
-  char file = (((char) s) & 7) + 'a';
-  sq_str[0] = file;
-  sq_str[1] = rank;
-  sq_str[3] = '\0';
-  return sq_str;
-}
 
 static void str_alloc_guard(char *p) {
   if (p == NULL) {
@@ -99,19 +84,45 @@ static void str_alloc_guard(char *p) {
   }
 }
 
+char *to_square_str(const SquareEncoding s) {
+  char *sq_str = malloc(3*sizeof(char));
+  str_alloc_guard(sq_str);
+  char rank = (((char) s) >> 4) + '1';
+  char file = (((char) s) & 7) + 'a';
+  sq_str[0] = file;
+  sq_str[1] = rank;
+  sq_str[3] = '\0';
+  return sq_str;
+}
+
 char *to_hex_str(const GameEncoding *g) {
   // "7034" -> 1. e4
   // "70344E55" -> 1. e4 Nf3
   // Allocate 2 bytes for each encoding, + 1 for null terminator
   size_t num_bytes = 4 * (sizeof(char) * g->turn - 1) + 1;
   char *str = malloc(num_bytes);
-  printf("String size: %zu\n", num_bytes);
   str_alloc_guard(str);
   for (size_t i = 0; i < g->turn - 1; i++) {
     MoveEncoding m = g->ms[i+1];
     sprintf(str + 4 * i, "%02x%02x", m.piece, m.square);
   }
   return str;
+}
+
+char *to_ascii_str(const GameEncoding *g) {
+  size_t num_bytes = 2 * (sizeof(char) * g->turn - 1) + 1;
+  char *str = malloc(num_bytes);
+  printf("String size: %zu\n", num_bytes);
+  str_alloc_guard(str);
+  for (size_t i = 0; i < g->turn -1; i++) {
+    MoveEncoding m = g->ms[i+1];
+    sprintf(str + 2 * i, "%c%c", m.piece, m.square);
+  }
+  return str;
+}
+
+char *to_str(GameEncoding *g, StrFormat f) {
+  return (char *) NULL;
 }
 
 // SINGLE SOURCE OF TRUTH FOR DEALLOCATING STRING MEMORY!
@@ -132,43 +143,12 @@ void write_to_file(char *str) {
 int main(void) {
   GameEncoding game = new_game();
   append_move(&game, (MoveEncoding) {WHITE_PAWN, E4});
-  append_move(&game, (MoveEncoding) {BLACK_KNIGHT, F6});
+  append_move(&game, (MoveEncoding) {BLACK_PAWN, E5});
   print_encoding(&game);
-  char *test = to_hex_str(&game);
+  char *test = to_ascii_str(&game);
   printf("TEST ENCODING: %s\n", test);
   write_to_file(test);
-  free(test);
   return 0;
-}
-
-// Perhaps I should define set of format specifiers and pass them
-// as opposed to using this string formatting type.
-char *to_str(const GameEncoding *g, StrFormat f) {
-  char *str = malloc((sizeof(g->ms[0].piece)
-		    + sizeof(g->ms[0].square)) * g->turn
-		    + 1);
-  if (str == NULL) {
-    perror("Failed to allocate memory to c_str.\n");
-    exit(EXIT_FAILURE);
-  }
-  for (size_t i = 0; i < g->turn; i++) {
-    MoveEncoding m = g->ms[i];
-    switch(f) {
-    case HEX:
-      sprintf(str, "0x%02x0x%02x", m.piece, m.square);
-      break;
-    case CSTR:
-      sprintf(str, "%c%s", m.piece, to_square_str(m.square));
-      break;
-    case PGN:
-      assert(0 && "implement me!");
-      break;
-    default:
-      fprintf(stderr, "Should not get here in to_str switch");
-      exit(EXIT_FAILURE);
-    }
-  }
-  return str;
 }
 
 void fgets_exit_gracefully() {
@@ -192,7 +172,7 @@ int main2(void) {
     printf("Make move: ");
     if (fgets(input, MAX_INPUT_LENGTH, stdin) == NULL) {
       printf("EXITING FOR STRING TEST\n");
-      printf("%s\n", to_str(&game, CSTR));
+      printf("%s\n", to_str(&game, ASCII));
       fgets_exit_gracefully();
     }
     read_length = strlen(input);

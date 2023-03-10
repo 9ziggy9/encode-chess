@@ -16,11 +16,14 @@ define print_in_color
 	@printf "\033[0m"
 endef
 
-makeRun: main run clean
+make_run_clean: main run clean
 
 run:
 	$(call print_in_color, $(GREEN), \nRUNNING:\n)
 	@./main.out
+
+leak_test: main
+	valgrind --leak-check=full ./main.out
 
 main: main.c
 	$(call print_in_color, $(BLUE), \nCOMPILING:\n)
