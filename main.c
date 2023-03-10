@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <string.h>
 
 typedef enum {
   BLACK_RESIGN  = 0x45, WHITE_RESIGN  = 0x65,
@@ -57,11 +59,28 @@ size_t appendMove(GameEncoding *g, MoveEncoding m) {
   return ++g->turn;
 }
 
+#define MAX_INPUT_LENGTH 5
 int main(void) {
-  char input[3];
-  printf("> ");
-  scanf("%3[^\n]s", input);
-  printf("%x\n", input[0]);
-  printf("\n");
+  char input[MAX_INPUT_LENGTH];
+  size_t read_length;
+  while (1) {
+    printf("Make move: ");
+    // if fgets encounters EOF or error, it return null we use
+    // feof and ferror respectively to test these conditions
+    if (fgets(input, MAX_INPUT_LENGTH, stdin) == NULL) {
+      if (feof(stdin)) {
+	fprintf(stdout, "End of file reached.\n");
+	exit(EXIT_SUCCESS);
+      } else if (ferror(stdin)) {
+	fprintf(stderr, "Error: fgets reading NULL");
+	exit(EXIT_FAILURE);
+      }
+    }
+    read_length = strlen(input);
+    if (read_length > 0 && input[read_length - 1] == '\n') {
+      input[read_length - 1] = '\0'; // Remove \n and terminate the string
+    }
+    printf("You entered: %s\n", input);
+  }
   return 0;
 }
