@@ -21,6 +21,10 @@ make_run_clean: main run clean
 run:
 	$(call print_in_color, $(GREEN), \nRUNNING:\n)
 	@./main.out
+	$(call print_in_color, $(YELLOW), \nHEXDUMP:\n)
+	@xxd ./out.txt
+	$(call print_in_color, $(YELLOW), \nSIZE IN BYTES:\t)
+	@stat --format="%s" out.txt
 
 leak_test: main
 	valgrind --leak-check=full ./main.out
@@ -30,5 +34,5 @@ main: main.c
 	cc -o ./main.out $(CFLAGS) main.c
 
 clean:
-	$(call print_in_color, $(YELLOW), \nREMOVING OLD EXE)
+	$(call print_in_color, $(RED), \nREMOVING OLD EXE\n)
 	@rm -rf ./main.out

@@ -163,6 +163,8 @@ int main(void) {
   GameEncoding game = new_game();
   append_move(&game, (MoveEncoding) {WHITE_PAWN, E4});
   append_move(&game, (MoveEncoding) {BLACK_PAWN, E5});
+  append_move(&game, (MoveEncoding) {WHITE_PAWN, D4});
+  append_move(&game, (MoveEncoding) {BLACK_KNIGHT, F6});
   print_encoding(&game);
   write_to_file(&game, ASCII);
   return 0;
