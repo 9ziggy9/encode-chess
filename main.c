@@ -6,13 +6,22 @@
 #include <string.h>
 
 typedef enum {
-  BLACK_RESIGN  = 0x45, WHITE_RESIGN  = 0x65,
-  BLACK_PAWN	= 0x50, BLACK_ROOK    = 0x52,
-  BLACK_KNIGHT	= 0x4E, BLACK_BISHOP  = 0x42,
-  BLACK_QUEEN	= 0x51, BLACK_KING    = 0x4B,
-  WHITE_PAWN	= 0x70, WHITE_ROOK    = 0x72,
-  WHITE_KNIGHT	= 0x6E, WHITE_BISHOP  = 0x62,
-  WHITE_QUEEN	= 0x71, WHITE_KING    = 0x6B
+  // My idea: 0x77 - 0x42 = 0x35
+  // This means that if I shift each char value by 0x36,
+  // all values are guaranteed to fall out of range of 0x88
+  // encoding of squares.
+  // The largest char in this set is 0x72, which will be
+  // shifted to 0xA8, well below 0xFF and therefore in
+  // 8 bit limit.
+  // So to differentiate a piece from a square, one need
+  // only test that it is > 0x77
+  BLACK_RESIGN  = 0x45 + 0x36, WHITE_RESIGN  = 0x65 + 0x36,
+  BLACK_PAWN	= 0x50 + 0x36, BLACK_ROOK    = 0x52 + 0x36,
+  BLACK_KNIGHT	= 0x4E + 0x36, BLACK_BISHOP  = 0x42 + 0x36,
+  BLACK_QUEEN	= 0x51 + 0x36, BLACK_KING    = 0x4B + 0x36,
+  WHITE_PAWN	= 0x70 + 0x36, WHITE_ROOK    = 0x72 + 0x36,
+  WHITE_KNIGHT	= 0x6E + 0x36, WHITE_BISHOP  = 0x62 + 0x36,
+  WHITE_QUEEN	= 0x71 + 0x36, WHITE_KING    = 0x6B + 0x36
 } Piece;
 
 typedef enum {
@@ -68,6 +77,12 @@ char byte_iterator_next(ByteIterator *it) {
 ByteIterator byte_iterator(const char *ascii) {
   return (ByteIterator) {ascii, 0, byte_iterator_next};
 }
+
+typedef struct HexIterator {
+  const char *hex_stream;
+  size_t idx;
+  char (*next)(struct HexIterator *);
+} HexIterator;
 
 Square to_0x88(const char rk, const char fl) {
   Square rank = rk - 'a';
@@ -183,6 +198,12 @@ void write_to_file(Game *g, StrFormat fmt) {
   str = NULL;
 }
 
+char *decode_byte(const char byte) {
+  return byte > 0x77
+    ? (char[2]) { byte - 0x36, '\0' }
+    : to_square_str(byte);
+}
+
 void fgets_exit_gracefully() {
   // if fgets encounters EOF or error, it return null we use
   // feof and ferror respectively to test these conditions
@@ -196,17 +217,15 @@ void fgets_exit_gracefully() {
 }
 
 int main_test_byte_it(void) {
-  ByteIterator it = byte_iterator("abc");
+  ByteIterator it = byte_iterator("p4PD");
   char v = it.next(&it);
   printf("Next char: %c\n", v);
   v = it.next(&it);
-  printf("Next char: %c\n", v);
+  printf("Next char: %s\n", to_square_str(v));
   v = it.next(&it);
   printf("Next char: %c\n", v);
   v = it.next(&it);
-  printf("Next char: %c\n", v);
-  v = it.next(&it);
-  printf("Next char: %c\n", v);
+  printf("Next char: %s\n", to_square_str(v));
   return 0;
 }
 
@@ -217,23 +236,7 @@ int main(void) {
   append_move(&game, (Move) {WHITE_PAWN, D4});
   append_move(&game, (Move) {BLACK_PAWN, D5});
 
-  MoveIterator it = move_iterator(&game);
-  Move m = it.next(&it);
-  m = it.next(&it);
-  print_move(&m);
-  m = it.next(&it);
-  print_move(&m);
-  m = it.next(&it);
-  print_move(&m);
-  m = it.next(&it);
-  print_move(&m);
-  m = it.next(&it);
-  print_move(&m);
-  m = it.next(&it);
-  print_move(&m);
-  m = it.next(&it);
-  print_move(&m);
-  print_game(&game);
+  write_to_file(&game, ASCII);
 
   return 0;
 }
