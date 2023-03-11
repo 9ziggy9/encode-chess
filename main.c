@@ -13,7 +13,7 @@ typedef enum {
   WHITE_PAWN	= 0x70, WHITE_ROOK    = 0x72,
   WHITE_KNIGHT	= 0x6E, WHITE_BISHOP  = 0x62,
   WHITE_QUEEN	= 0x71, WHITE_KING    = 0x6B
-} PieceEncoding;
+} Piece;
 
 typedef enum {
   // 0x88 encoding scheme: https://en.wikipedia.org/wiki/0x88
@@ -25,42 +25,53 @@ typedef enum {
   A6 = 0x50, B6, C6, D6, E6, F6, G6, H6,
   A7 = 0x60, B7, C7, D7, E7, F7, G7, H7,
   A8 = 0x70, B8, C8, D8, E8, F8, G8, H8
-} SquareEncoding;
+} Square;
 
-typedef struct MoveEncoding {
-  PieceEncoding piece;
-  SquareEncoding square;
-} MoveEncoding;
+typedef struct Move {
+  Piece piece;
+  Square square;
+} Move;
 
-typedef struct GameEncoding {
-  MoveEncoding ms[255];
+typedef struct Game {
+  Move ms[255];
   size_t turn;
-} GameEncoding;
+} Game;
 
-SquareEncoding to_0x88(const char rk, const char fl) {
-  SquareEncoding rank = rk - 'a';
-  SquareEncoding file = fl - '1';
+typedef struct MoveIterator {
+  const Game *g;
+  size_t idx;
+  Move (*next)(struct MoveIterator *);
+} MoveIterator;
+
+Move move_iterator_next(MoveIterator *it) { return it->g->ms[it->idx++]; }
+MoveIterator move_iterator(const Game *g) {
+  return (MoveIterator) {g, 0, move_iterator_next};
+}
+
+Square to_0x88(const char rk, const char fl) {
+  Square rank = rk - 'a';
+  Square file = fl - '1';
   return (file << 4) + rank;
 }
 
-PieceEncoding to_piece_byte(const char piece) { return (PieceEncoding) piece; }
+Piece to_piece_byte(const char piece) { return (Piece) piece; }
 
-MoveEncoding encode_move(const char *input) {
-  return (MoveEncoding) {
+Move encode_move(const char *input) {
+  return (Move) {
     .piece = to_piece_byte(input[0]),
     .square = to_0x88(input[1], input[2])
   };
 }
 
-GameEncoding new_game() { return (GameEncoding) {.turn = 1}; }
+Game new_game() { return (Game) {.turn = 1}; }
 
-size_t append_move(GameEncoding *g, MoveEncoding m) {
+size_t append_move(Game *g, Move m) {
   assert(g->turn <= sizeof(g->ms) / sizeof(g->ms[0]) && "Too many moves");
   g->ms[g->turn] = m;
   return ++g->turn;
 }
 
-void print_encoding(const GameEncoding *g) {
+void print_encoding(const Game *g) {
   size_t turn = 1;
   printf("\n");
   while(turn < g->turn) {
@@ -84,7 +95,7 @@ static void str_alloc_guard(char *p) {
   }
 }
 
-char *to_square_str(const SquareEncoding s) {
+char *to_square_str(const Square s) {
   char *sq_str = malloc(3*sizeof(char));
   str_alloc_guard(sq_str);
   char rank = (((char) s) >> 4) + '1';
@@ -95,7 +106,7 @@ char *to_square_str(const SquareEncoding s) {
   return sq_str;
 }
 
-char *to_hex_str(const GameEncoding *g) {
+char *to_hex_str(const Game *g) {
   // "7034" -> 1. e4
   // "70344E55" -> 1. e4 Nf3
   // Allocate 2 bytes for each encoding, + 1 for null terminator
@@ -103,25 +114,25 @@ char *to_hex_str(const GameEncoding *g) {
   char *str = malloc(num_bytes);
   str_alloc_guard(str);
   for (size_t i = 0; i < g->turn - 1; i++) {
-    MoveEncoding m = g->ms[i+1];
+    Move m = g->ms[i+1];
     sprintf(str + 4 * i, "%02x%02x", m.piece, m.square);
   }
   return str;
 }
 
-char *to_ascii_str(const GameEncoding *g) {
+char *to_ascii_str(const Game *g) {
   size_t num_bytes = 2 * (sizeof(char) * g->turn - 1) + 1;
   char *str = malloc(num_bytes);
   printf("String size: %zu\n", num_bytes);
   str_alloc_guard(str);
   for (size_t i = 0; i < g->turn -1; i++) {
-    MoveEncoding m = g->ms[i+1];
+    Move m = g->ms[i+1];
     sprintf(str + 2 * i, "%c%c", m.piece, m.square);
   }
   return str;
 }
 
-char *to_str(GameEncoding *g, StrFormat fmt) {
+char *to_str(Game *g, StrFormat fmt) {
   switch(fmt) {
   case HEX: return to_hex_str(g);
   case ASCII: return to_ascii_str(g);
@@ -133,7 +144,7 @@ char *to_str(GameEncoding *g, StrFormat fmt) {
 
 // SINGLE SOURCE OF TRUTH FOR DEALLOCATING STRING MEMORY!
 // BEWARE OF DOUBLE FREEING PLZ
-void write_to_file(GameEncoding *g, StrFormat fmt) {
+void write_to_file(Game *g, StrFormat fmt) {
   char *str = to_str(g, fmt);
   FILE *f;
   f = fopen("out.txt", "w");
@@ -160,13 +171,13 @@ void fgets_exit_gracefully() {
 }
 
 int main(void) {
-  GameEncoding game = new_game();
-  append_move(&game, (MoveEncoding) {WHITE_PAWN, E4});
-  append_move(&game, (MoveEncoding) {BLACK_PAWN, E5});
-  append_move(&game, (MoveEncoding) {WHITE_PAWN, D4});
-  append_move(&game, (MoveEncoding) {BLACK_KNIGHT, F6});
-  append_move(&game, (MoveEncoding) {BLACK_QUEEN, F8});
-  append_move(&game, (MoveEncoding) {WHITE_BISHOP, A6});
+  Game game = new_game();
+  append_move(&game, (Move) {WHITE_PAWN, E4});
+  append_move(&game, (Move) {BLACK_PAWN, E5});
+  append_move(&game, (Move) {WHITE_PAWN, D4});
+  append_move(&game, (Move) {BLACK_KNIGHT, F6});
+  append_move(&game, (Move) {BLACK_QUEEN, F8});
+  append_move(&game, (Move) {WHITE_BISHOP, A6});
   print_encoding(&game);
   write_to_file(&game, ASCII);
   return 0;
@@ -176,7 +187,7 @@ int main(void) {
 int main2(void) {
   char input[MAX_INPUT_LENGTH];
   size_t read_length;
-  GameEncoding game = new_game();
+  Game game = new_game();
   while (1) {
     printf("Make move: ");
     if (fgets(input, MAX_INPUT_LENGTH, stdin) == NULL) {
