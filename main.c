@@ -43,7 +43,11 @@ typedef struct MoveIterator {
   Move (*next)(struct MoveIterator *);
 } MoveIterator;
 
-Move move_iterator_next(MoveIterator *it) { return it->g->ms[it->idx++]; }
+Move move_iterator_next(MoveIterator *it) {
+  return it->idx < it->g->turn - 1
+    ? it->g->ms[it->idx++]
+    : it->g->ms[it->idx];
+}
 MoveIterator move_iterator(const Game *g) {
   return (MoveIterator) {g, 0, move_iterator_next};
 }
@@ -54,7 +58,13 @@ typedef struct ByteIterator {
   char (*next)(struct ByteIterator *);
 } ByteIterator;
 
-char byte_iterator_next(ByteIterator *it) { return it->ascii[it->idx++]; }
+// TERNARY TO ENFORCE IDEMPOTENCE
+char byte_iterator_next(ByteIterator *it) {
+  return it->idx < strlen(it->ascii) - 1
+    ? it->ascii[it->idx++]
+    : it->ascii[it->idx];
+}
+
 ByteIterator byte_iterator(const char *ascii) {
   return (ByteIterator) {ascii, 0, byte_iterator_next};
 }
@@ -185,14 +195,27 @@ void fgets_exit_gracefully() {
   }
 }
 
+int main_test_byte_it(void) {
+  ByteIterator it = byte_iterator("abc");
+  char v = it.next(&it);
+  printf("Next char: %c\n", v);
+  v = it.next(&it);
+  printf("Next char: %c\n", v);
+  v = it.next(&it);
+  printf("Next char: %c\n", v);
+  v = it.next(&it);
+  printf("Next char: %c\n", v);
+  v = it.next(&it);
+  printf("Next char: %c\n", v);
+  return 0;
+}
+
 int main(void) {
   Game game = new_game();
   append_move(&game, (Move) {WHITE_PAWN, E4});
   append_move(&game, (Move) {BLACK_PAWN, E5});
   append_move(&game, (Move) {WHITE_PAWN, D4});
-  append_move(&game, (Move) {BLACK_KNIGHT, F6});
-  append_move(&game, (Move) {BLACK_QUEEN, F8});
-  append_move(&game, (Move) {WHITE_BISHOP, A6});
+  append_move(&game, (Move) {BLACK_PAWN, D5});
 
   MoveIterator it = move_iterator(&game);
   Move m = it.next(&it);
@@ -206,7 +229,11 @@ int main(void) {
   print_move(&m);
   m = it.next(&it);
   print_move(&m);
-  /* print_game(&game); */
+  m = it.next(&it);
+  print_move(&m);
+  m = it.next(&it);
+  print_move(&m);
+  print_game(&game);
 
   return 0;
 }
