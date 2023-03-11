@@ -71,7 +71,7 @@ size_t append_move(Game *g, Move m) {
   return ++g->turn;
 }
 
-void print_encoding(const Game *g) {
+void print_game(const Game *g) {
   size_t turn = 1;
   printf("\n");
   while(turn < g->turn) {
@@ -81,6 +81,10 @@ void print_encoding(const Game *g) {
     turn++;
   }
   printf("\n");
+}
+
+void print_move(const Move *m) {
+  printf("{0x%02x, 0x%02x}\n", m->piece, m->square);
 }
 
 typedef enum {
@@ -178,8 +182,21 @@ int main(void) {
   append_move(&game, (Move) {BLACK_KNIGHT, F6});
   append_move(&game, (Move) {BLACK_QUEEN, F8});
   append_move(&game, (Move) {WHITE_BISHOP, A6});
-  print_encoding(&game);
-  write_to_file(&game, ASCII);
+
+  MoveIterator it = move_iterator(&game);
+  Move m = it.next(&it);
+  m = it.next(&it);
+  print_move(&m);
+  m = it.next(&it);
+  print_move(&m);
+  m = it.next(&it);
+  print_move(&m);
+  m = it.next(&it);
+  print_move(&m);
+  m = it.next(&it);
+  print_move(&m);
+  /* print_game(&game); */
+
   return 0;
 }
 
@@ -202,7 +219,7 @@ int main2(void) {
     }
     printf("You entered: %s\n", input);
     append_move(&game, encode_move(input));
-    print_encoding(&game);
+    print_game(&game);
     /* printf("%s\n", to_str(&game, CSTR)); */
   }
   return 0;
