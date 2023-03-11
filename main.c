@@ -48,6 +48,17 @@ MoveIterator move_iterator(const Game *g) {
   return (MoveIterator) {g, 0, move_iterator_next};
 }
 
+typedef struct ByteIterator {
+  const char *ascii;
+  size_t idx;
+  char (*next)(struct ByteIterator *);
+} ByteIterator;
+
+char byte_iterator_next(ByteIterator *it) { return it->ascii[it->idx++]; }
+ByteIterator byte_iterator(const char *ascii) {
+  return (ByteIterator) {ascii, 0, byte_iterator_next};
+}
+
 Square to_0x88(const char rk, const char fl) {
   Square rank = rk - 'a';
   Square file = fl - '1';
